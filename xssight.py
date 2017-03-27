@@ -155,7 +155,7 @@ print("\t\033[1;31m                '--------------------------' \033[1;m")
 
 
 print("\033[1;35m These types of URLs are accepted\033[1;m")
-print(" Example: http://www.dwebsite.com/ ")
+print(" Example: http://www.website.com/ ")
 print(" Example: http://www.website.com= ")
 print(" Example: http://www.website.com? ")
 
