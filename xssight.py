@@ -88,7 +88,7 @@ class JSHTTPCookieProcessor(urllib2.BaseHandler):
 #Function In Case of Crawling 
 def xss(exploit):
     for link in links:
-        print(Fore.RED + "Testing:",link[0]+exploit)
+        print(f"{Fore.RED}Testing:", link[0]+exploit)
         try:
             if xi != 0:
                 handler = urllib2.Handler({'http': 'http://' + '/'})
@@ -100,15 +100,14 @@ def xss(exploit):
             if re.search("xss", source.lower()) != None:
                 print(Fore.RED + "\n[!] XSS:",link[0]+exploit,"\n")
             else:
-                print(Fore.GREEN + "[-] Not Vulnerable.") 
-        except(urllib2.HTTPError) as msg:
+                print(f"{Fore.GREEN}[-] Not Vulnerable.")
+        except urllib2.HTTPError as msg:
             print("[-] Error:",msg)
-            pass
 
 
 #Function in case of Vulnerability Confirmation        
 def xxs2(exploi):
-    print(Fore.RED + " Testing:",host+exploi)
+    print(f"{Fore.RED} Testing:", host+exploi)
     try:
         if xi != 0:
             handle = urllib2.Handler({'http': 'http://' + '/'})
@@ -120,22 +119,21 @@ def xxs2(exploi):
             ##Detecting WAF if Exist
             if res1.code == 406:
                 print(" WAF Detected => (Mod_Security)")
+            elif res1.code == 419:
+                print(" WAF Detected => F5 BIG IP")
             elif res1.code == 999:
                 print(" WAF Detected => WebKnight")
                 time.sleep(5)
-            elif res1.code == 419:
-                print(" WAF Detected => F5 BIG IP")
             else:
                 print("\033[1;32m WAF Not Found\033[1;m")
         if re.search("xss", sourc.lower()) != None:
             print(Fore.RED + "\n[!] XSS:",host+exploi,"\n")
-                
-            
+
+
         else:
-            print(Fore.GREEN + "[-] Not Vulnerable.")
-    except(urllib2.HTTPError) as msg:
+            print(f"{Fore.GREEN}[-] Not Vulnerable.")
+    except urllib2.HTTPError as msg:
         print("[-] Error:",msg)
-        pass
         
     
 ####### Print Menu and Exmaple ########
@@ -174,7 +172,7 @@ choice = input(' Enter your choice [1-2] : ')
 print(res.info())
 myfile = res.read()
 
-### Testing the connection ###    
+### Testing the connection ###
 try:
     if sys.argv[3]:
         xi = sys.argv[3]
@@ -182,34 +180,49 @@ try:
         h2 = six.moves.http_client.httplib.ssl(xi)
         h2.connect()
         print("[+] xi:",xi)
-except(socket.timeout):
+except socket.timeout:
     print("\033[1;31mConnection Timed Out\033[1;m")
     xi = 0
-    pass
 except:
     xi = 0
-    pass
-
-
 ### Print the result in Case of Crawling###
-if('1' in choice):
+if ('1' in choice):
     try:
         for phase in (GET, POST):
             current = host if phase is GET else ("")
             for match in re.finditer(r"((\A|[?&])(?P<parameter>[\w\[\]]+)=)(?P<value>[^&#]*)", current):
                 found, usable = False, True
-                print("* scanning %s parameter '%s'" % (phase, match.group("parameter")))
-                prefix, suffix = ("".join(random.sample(string.ascii_lowercase, PREFIX_SUFFIX_LENGTH)) for i in range(2))
+                print(f"""* scanning {phase} parameter '{match.group("parameter")}'""")
+                prefix, suffix = (
+                    "".join(
+                        random.sample(
+                            string.ascii_lowercase, PREFIX_SUFFIX_LENGTH
+                        )
+                    )
+                    for _ in range(2)
+                )
                 for pool in (LARGER_CHAR_POOL, SMALLER_CHAR_POOL):
                     if not found:
-                        tampered = current.replace(match.group(0), "%s%s" % (match.group(0), urllib.quote("%s%s%s%s" % ("'" if pool == LARGER_CHAR_POOL else "", prefix, "".join(random.sample(pool, len(pool))), suffix))))
-                        content = (_retrieve_content(tampered) if phase is GET else _retrieve_content(url, tampered)).replace("%s%s" % ("'" if pool == LARGER_CHAR_POOL else "", prefix), prefix)
-                        for sample in re.finditer("%s([^ ]+?)%s" % (prefix, suffix), content, re.I):
+                        tampered = current.replace(
+                            match.group(0),
+                            f'''{match.group(0)}{urllib.quote(f"""{"'" if pool == LARGER_CHAR_POOL else ""}{prefix}{"".join(random.sample(pool, len(pool)))}{suffix}""")}''',
+                        )
+                        content = (
+                            _retrieve_content(tampered)
+                            if phase is GET
+                            else _retrieve_content(url, tampered)
+                        ).replace(
+                            f"""{"'" if pool == LARGER_CHAR_POOL else ""}{prefix}""",
+                            prefix,
+                        )
+                        for sample in re.finditer(f"{prefix}([^ ]+?){suffix}", content, re.I):
                             for regex, condition, info, content_removal_regex in REGULAR_PATTERNS:
                                 context = re.search(regex % {"chars": re.escape(sample.group(0))}, re.sub(content_removal_regex or "", "", content), re.I)
                                 if context and not found and sample.group(1).strip():
                                     if _contains(sample.group(1), condition):
-                                        print(" (i) %s parameter '%s' appears to be XSS vulnerable (%s)" % (phase, match.group("parameter"), info % dict((("filtering", "no" if all(char in sample.group(1) for char in LARGER_CHAR_POOL) else "some"),))))
+                                        print(
+                                            f""" (i) {phase} parameter '{match.group("parameter")}' appears to be XSS vulnerable ({info % dict((("filtering", "no" if all(char in sample.group(1) for char in LARGER_CHAR_POOL) else "some"), ))})"""
+                                        )
                                         found = retval = True
                                     break
         if not usable:
@@ -219,7 +232,7 @@ if('1' in choice):
     except urllib2.HTTPError:
         print("Error")
 
-if('2' in choice):
+if ('2' in choice):
     print ("[+] Injecting payloads in the parameter:", host),len(xss_attack),("payloads\n")
     for exploi in xss_attack:
         time.sleep(5)
@@ -230,10 +243,7 @@ if('2' in choice):
         heer = custom.check()
         try:
             mam = myopener.open(host+exploi).read()
-            found = False
-            for payload in heer.hit:
-                if payload in mam:
-                    found = True
+            found = any(payload in mam for payload in heer.hit)
             if found:                
                 print ("\033[1;32m[+] Confirmed Payload Found in Web Page Code\033[1;m")
                 #Getting COKKIES 
@@ -250,6 +260,6 @@ if('2' in choice):
                     print ("\033[1;32m==>\033[1;m", cookie)
             else:
                 print ("\033[1;31m[-] False Positive\033[1;m")
-                
+
         except urllib2.HTTPError:
             print ("\033[1;31mError\033[1;m")
